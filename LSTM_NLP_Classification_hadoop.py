@@ -33,7 +33,7 @@ cufflinks.set_config_file(world_readable=True, theme='pearl')
 # In[2]:
 
 
-df = pd.read_csv('data/hadoop/HADOOP_aug2_word_ori.csv')
+df = pd.read_csv('data/hadoop/HADOOP_aug2_word_ori.csv', encoding='cp949')
 
 
 # In[3]:
