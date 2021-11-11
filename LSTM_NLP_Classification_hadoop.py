@@ -3,14 +3,15 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
-from keras.models import Sequential
-from keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
 from sklearn.model_selection import train_test_split
-from keras.utils.np_utils import to_categorical
-from keras.callbacks import EarlyStopping
-from keras.layers import Dropout
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Dropout
 import re
 import nltk
 import chart_studio
@@ -32,7 +33,7 @@ cufflinks.set_config_file(world_readable=True, theme='pearl')
 # In[2]:
 
 
-df = pd.read_csv('NLP-with-Python/data/HADOOP_aug2_word_ori.csv')
+df = pd.read_csv('data/hadoop/HADOOP_aug2_word_ori.csv')
 
 
 # In[3]:
