@@ -14,9 +14,9 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dropout
 import re
 import nltk
-import chart_studio
 from nltk.corpus import stopwords
 from nltk import word_tokenize
+nltk.download('stopwords')
 STOPWORDS = set(stopwords.words('english'))
 from bs4 import BeautifulSoup
 import plotly.graph_objects as go
