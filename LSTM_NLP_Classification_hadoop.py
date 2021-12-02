@@ -33,7 +33,7 @@ InteractiveShell.ast_node_interactivity = 'all'
 from chart_studio.plotly import iplot
 cufflinks.go_offline()
 cufflinks.set_config_file(world_readable=True, theme='pearl')
-from keras import backend as K
+from tensorflow.keras import backend as K
 
 
 # In[2]:
@@ -254,7 +254,7 @@ dataloc4 = "data/hadoop/HADOOP_word_ContextualWordEmbs_ori.csv"
 dataloc4 = "data/hadoop/HADOOP_word_Spelling_ori.csv"
 dataloc5 = "data/hadoop/HADOOP_word_Split_ori.csv"
 dataloc6 = "data/hadoop/HADOOP_word_Synonym_ori.csv"
-dataloc7 = "data/hadoop/HADOOP_word_TfidfAug_ori.csv"
+dataloc7 = "~/github_a22106/NLP-with-Python/data/hadoop/HADOOP_word_TfIdfAug_ori.csv"
 pius_word1 = Lstm_issue(dataloc7)
 
 

@@ -14,9 +14,6 @@ from keras.layers import GlobalMaxPooling1D, Conv1D, MaxPooling1D, Flatten, Bidi
 from keras.preprocessing import sequence, text
 from keras.callbacks import EarlyStopping
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 import nltk
 import re, string
 
