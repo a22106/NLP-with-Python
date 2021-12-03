@@ -1,21 +1,26 @@
-import numpy as np # linear algebra
-import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
-from tqdm import tqdm
-from sklearn.model_selection import train_test_split
+import numpy as np 
+import pandas as pd
 import tensorflow as tf
-from keras.models import Sequential
-from keras.layers.recurrent import LSTM, GRU,SimpleRNN
-from keras.layers.core import Dense, Activation, Dropout
-from keras.layers.embeddings import Embedding
-from keras.layers.normalization import batch_normalization
-from keras.utils import np_utils
-from sklearn import preprocessing, decomposition, model_selection, metrics, pipeline
-from keras.layers import GlobalMaxPooling1D, Conv1D, MaxPooling1D, Flatten, Bidirectional, SpatialDropout1D
-from keras.preprocessing import sequence, text
-from keras.callbacks import EarlyStopping
-
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Dropout
+import re
 import nltk
-import re, string
+import chart_studio
+from nltk.corpus import stopwords
+from nltk import word_tokenize
+STOPWORDS = set(stopwords.words('english'))
+from bs4 import BeautifulSoup
+import plotly.graph_objects as go
+import chart_studio.plotly as py
+import cufflinks
+from IPython.core.interactiveshell import InteractiveShell
+import plotly.figure_factory as ff
 
 
 ISLANDORA_LABEL_NUM = 67
@@ -30,6 +35,11 @@ labels_Num = {
 
 class NLP_classification_aug:
     def __init__(self, dataset_name, augmenter_name, augment_size = 7, nlp_model_name = 'bert'):
+        # The maximum number of words to be used. (most frequent)
+        self.MAX_NB_WORDS = 25000
+        # Max number of words in each complaint.
+        self.MAX_SEQUENCE_LENGTH = 250
+        self.EMBEDDING_DIM = 100 # how big is each word vector
         self.dataset_name = dataset_name
         self.labels_num = labels_Num[dataset_name]
 
@@ -44,11 +54,11 @@ class NLP_classification_aug:
         self.transform_model = {'bert': 'bert-base-uncased', 'roberta': 'roberta-base', 'xlnet': 'xlnet-base-uncased', 'distilbert': 'distilbert-base-uncased', 'xlm': 'xlm-roberta-base', 'electra': 'google/electra-base-discriminator'}
 
         # 데이터 위치 data location
-        self.data_location_ori = 'data/{}/{}.csv'.format(self.dataset_name, self.dataset_name)
+        self.data_location_ori = 'D:/GitHub/NLP-with-Python/data/{}/{}.csv'.format(self.dataset_name, self.dataset_name)
         # dataset name: hadoop, islandora, fcrepo
         # augmentation type: char, word
         # augmenter name: Synonym, Split etc.
-        self.data_location_aug = 'data/{}/{}_{}_{}.csv'.format(self.dataset_name, self.dataset_name, self.augmentation_type, self.augmenter_name)     
+        self.data_location_aug = 'D:/GitHub/NLP-with-Python/data/{}/{}_{}_{}.csv'.format(self.dataset_name, self.dataset_name, self.augmentation_type, self.augmenter_name)     
 
         # 데이터 변수 입력
         self.data_ori = pd.read_csv(self.data_location_ori) # original data
@@ -115,44 +125,43 @@ class NLP_classification_aug:
         self.yvalid = pd.get_dummies(self.test_ori[set(self.data_comp.component)])
         self.label_nums = 37
 
-    def tokenize_LSTM(self):
-        self.X_train = self.X_train.sample(frac=1).reset_index(drop=True)
-        X_train_index = list(self.X_train.index)
-        self.X_test = self.df['text'].drop(X_train_index)
-        self.X_test = self.X_test.sample(frac=1).reset_index(drop=True)
-
-        self.Y_train = self.Y_train.sample(frac=1).reset_index(drop=True)
-        self.Y_test = self.Y.drop(X_train_index)
-        self.Y_test = self.Y_test.sample(frac=1).reset_index(drop=True)
+    def tokenize_LSTM(self, xtrain, xvalid):
+        self.tokenizer = Tokenizer(num_words=self.MAX_NB_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~', lower=True)
+        self.tokenizer.fit_on_texts(self.data['text'].values)
+        word_index = self.tokenizer.word_index
+        print('Found %s unique tokens.' % len(word_index))
+        self.xtrain_tok_lstm = xtrain.sample(frac=1).reset_index(drop=True)
+        self.xtrain_index = list(xtrain.index)
+        self.xvalid_tok_lstm = xvalid.sample(frac=1).reset_index(drop=True)
+        self.xvalid_index = list(xtrain.index)
 
 
     def tokenize_CNN(self):
-        # The maximum number of words to be used. (most frequent)
-        self.MAX_NB_WORDS = 25000
-        # Max number of words in each complaint.
-        self.MAX_SEQUENCE_LENGTH = 250
-        self.EMBEDDING_DIM = 100 # how big is each word vector
+        tokenizer = Tokenizer(num_words = self.MAX_NB_WORDS)
+        tokenizer.fit_on_texts(self.data['text'].values)
+        word_index = tokenizer.word_index
+        print('Found %s unique tokens.' % len(word_index))
 
-        token = text.Tokenizer(num_words = self.MAX_NB_WORDS)
-        token.fit_on_texts(list(self.xtrain)+list(self.xvalid))
-        xtrain_seq = token.texts_to_sequences(self.xtrain)
-        xvalid_seq = token.texts_to_sequences(self.xvalid)
+        xtrain_seq = tokenizer.texts_to_sequences(self.xtrain)
+        xvalid_seq = tokenizer.texts_to_sequences(self.xvalid)
 
-        self.xtrain_pad = sequence.pad_sequences(xtrain_seq, maxlen=self.MAX_NB_WORDS)
-        self.xvalid_pad = sequence.pad_sequences(xvalid_seq, maxlen=self.MAX_NB_WORDS)
+        self.xtrain_pad = pad_sequences(xtrain_seq, maxlen=self.MAX_SEQUENCE_LENGTH)
+        self.xvalid_pad = pad_sequences(xvalid_seq, maxlen=self.MAX_SEQUENCE_LENGTH)
+        print('X shape of data tensor: ', self.xtrain.shape, self.xvalid.shape)
 
-        self.word_index = token.word_index
-
+        print('X train Shape of data tensor:', self.xtrain.shape,'X valid: ', self.xvalid.shape)
+        print('Y Shape of label tensor:', self.ytrain.shape,'y valid: ', self.yvalid.shape)
 
 
-    def set_model_LSTM(self):
+
+    def set_model_LSTM(self, xtrain, topk):
         self.modelLSTM = Sequential()
-        self.modelLSTM.add(Embedding(self.MAX_NB_WORDS, self.EMBEDDING_DIM, input_length=self.MAX_NB_WORDS))
+        self.modelLSTM.add(Embedding(self.MAX_NB_WORDS, self.EMBEDDING_DIM, input_length= self.MAX_SEQUENCE_LENGTH))
         self.modelLSTM.add(SpatialDropout1D(0.2))
         self.modelLSTM.add(LSTM(100, dropout=0.2, recurrent_dropout=0.2))
         self.modelLSTM.add(Dense(37, activation='sigmoid'))
-        self.modelLSTM.compile(loss='categorical_crossentropy', optimizer='adam', metrics=[tf.keras.metrics.Recall(top_k = 5)])
-        print(self.modelLSTM.summary())        
+        self.modelLSTM.compile(loss='categorical_crossentropy', optimizer='adam', metrics=[tf.keras.metrics.Recall(top_k = topk)])
+        print(self.modelLSTM.summary())
 
     def run_model_LSTM(self, x_train, y_train):
         epochs = 20
@@ -175,15 +184,15 @@ class NLP_classification_aug:
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[tf.keras.metrics.Recall(top_k = 5)])
             
         model.summary()
+
     
-    
-#    def set_model_transformers(self):
+    #    def set_model_transformers(self):
 
 testClass = NLP_classification_aug("HADOOP","Synonym")
 
 testClass.preprocess()
 testClass.split_data()
 testClass.tokenize_CNN()
-testClass.set_model_LSTM()
+testClass.set_model_LSTM(testClass.xtrain, 5)
 testClass.run_model_LSTM(testClass.xtrain_pad, testClass.ytrain)
 testClass.test_model(testClass.xvalid_pad, testClass.yvalid)
