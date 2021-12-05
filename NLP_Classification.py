@@ -63,6 +63,7 @@ class NLP_classification_aug:
         # 데이터 변수 입력
         self.data_ori = pd.read_csv(self.data_location_ori) # original data
         self.data = pd.read_csv(self.data_location_aug) # augmented data
+
         print(self.data.head())
         self.len_data = len(self.data_ori)
         self.eval_index = []
@@ -102,9 +103,9 @@ class NLP_classification_aug:
 
         #원본 데이터 split
         self.train_ori, self.test_ori = train_test_split(self.data_ori, test_size = 0.2, random_state=42)
-        
         self.eval_index_list = list(self.test_ori.index)
         self.eval_index_list.sort()
+
         # 테스트 데이터 title과 description 합쳐 text column 생성
         self.test_ori['text'] = list(self.test_ori.title + " "+ self.test_ori.description)
 
@@ -137,41 +138,48 @@ class NLP_classification_aug:
 
 
     def tokenize_CNN(self):
+
         tokenizer = Tokenizer(num_words = self.MAX_NB_WORDS)
         tokenizer.fit_on_texts(self.data['text'].values)
         word_index = tokenizer.word_index
         print('Found %s unique tokens.' % len(word_index))
 
-        xtrain_seq = tokenizer.texts_to_sequences(self.xtrain)
-        xvalid_seq = tokenizer.texts_to_sequences(self.xvalid)
+
+
+        self.xtrain_sample = self.xtrain.sample(frac=1).reset_index(drop=True)
+        self.xvalid_sample = self.xvalid.sample(frac=1).reset_index(drop=True)
+
+        xtrain_seq = tokenizer.texts_to_sequences(self.xtrain_sample.values)
+        xvalid_seq = tokenizer.texts_to_sequences(self.xvalid_sample.values)
 
         self.xtrain_pad = pad_sequences(xtrain_seq, maxlen=self.MAX_SEQUENCE_LENGTH)
         self.xvalid_pad = pad_sequences(xvalid_seq, maxlen=self.MAX_SEQUENCE_LENGTH)
-        print('X shape of data tensor: ', self.xtrain.shape, self.xvalid.shape)
-
-        print('X train Shape of data tensor:', self.xtrain.shape,'X valid: ', self.xvalid.shape)
+        print('X train Shape of data tensor:', self.xtrain_pad.shape,'X valid: ', self.xvalid_pad.shape)
         print('Y Shape of label tensor:', self.ytrain.shape,'y valid: ', self.yvalid.shape)
 
 
 
-    def set_model_LSTM(self, xtrain, topk):
+    def set_model_LSTM(self, topk):
+        # output layer: sigmoid, hidden layer: relu
         self.modelLSTM = Sequential()
         self.modelLSTM.add(Embedding(self.MAX_NB_WORDS, self.EMBEDDING_DIM, input_length= self.MAX_SEQUENCE_LENGTH))
         self.modelLSTM.add(SpatialDropout1D(0.2))
-        self.modelLSTM.add(LSTM(100, dropout=0.2, recurrent_dropout=0.2))
+        self.modelLSTM.add(LSTM(100, dropout=0.5, recurrent_dropout=0.2))
         self.modelLSTM.add(Dense(37, activation='sigmoid'))
         self.modelLSTM.compile(loss='categorical_crossentropy', optimizer='adam', metrics=[tf.keras.metrics.Recall(top_k = topk)])
         print(self.modelLSTM.summary())
 
     def run_model_LSTM(self, x_train, y_train):
-        epochs = 20
-        batch_size = 64
+        epochs = 15
+        batch_size = 80
 
         self.history = self.modelLSTM.fit(x_train, y_train, epochs=epochs, batch_size=batch_size,validation_split=0.1)
 
+
+
     def test_model(self, xvalid, yvalid):
         self.accr = self.modelLSTM.evaluate(xvalid, yvalid)
-        print('Test set\n Loss: {:0.3f}\n Accuracy: {0.3f}'.format(self.accr[0], self.accr[1]))
+        #print('Test set\n Loss: {:0.3f}\n Accuracy: {0.3f}'.format(self.accr[0], self.accr[1]))
 #    def sef_model_CNN(self):
     
     def set_model_RNN(self):
@@ -190,9 +198,44 @@ class NLP_classification_aug:
 
 testClass = NLP_classification_aug("HADOOP","Synonym")
 
-testClass.preprocess()
+'''testClass.preprocess()
 testClass.split_data()
 testClass.tokenize_CNN()
+print(testClass.ytrain)
 testClass.set_model_LSTM(testClass.xtrain, 5)
-testClass.run_model_LSTM(testClass.xtrain_pad, testClass.ytrain)
-testClass.test_model(testClass.xvalid_pad, testClass.yvalid)
+#testClass.run_model_LSTM(testClass.xtrain_pad, testClass.ytrain)
+#testClass.test_model(testClass.xvalid_pad, testClass.yvalid)'''
+
+dataset_name = ['HADOOP', 'FCREPO']
+#augmenter_name = ["OCR", "Keyboard", "Spelling", "ContextualWordEmbs", "Synonym", "Antonym", "Split"]
+augmenter_name = ["OCR", "ContextualWordEmbs", "Synonym", "Antonym", "Split"]
+nlp_model = ['bert', 'distilbert', 'robert']
+
+count1 = 0
+
+word_hist = []
+word_hist_all = []
+for dataset in dataset_name:
+    for augment in augmenter_name:
+        for topk in range(5, 16, 5):
+            ml = NLP_classification_aug(dataset, augment)
+            ml.preprocess()
+            ml.split_data()
+            ml.tokenize_CNN()
+            ml.set_model_LSTM(topk)
+            ml.run_model_LSTM(ml.xtrain_pad, ml.ytrain)
+            ml.test_model(ml.xvalid_pad, ml.yvalid)
+
+            word_hist.append(ml.history)
+        
+        for i in range(3):
+            word_hist_all.append(word_hist[i].history)
+        
+        for x in range(3):
+            # convert the history dict to a pandas DataFrame
+            hist_df = pd.DataFrame(word_hist_all[x])
+
+            # save to csv
+            hist_csv_file = 'history/20211205/HistoryRecallat{}_data{}_project{}.csv'.format(int(x%3)*5+5, augment, dataset)
+            with open(hist_csv_file, mode = 'w') as f:
+                hist_df.to_csv(f)
