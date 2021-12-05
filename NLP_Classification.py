@@ -54,11 +54,11 @@ class NLP_classification_aug:
         self.transform_model = {'bert': 'bert-base-uncased', 'roberta': 'roberta-base', 'xlnet': 'xlnet-base-uncased', 'distilbert': 'distilbert-base-uncased', 'xlm': 'xlm-roberta-base', 'electra': 'google/electra-base-discriminator'}
 
         # 데이터 위치 data location
-        self.data_location_ori = 'D:/GitHub/NLP-with-Python/data/{}/{}.csv'.format(self.dataset_name, self.dataset_name)
+        self.data_location_ori = 'data/{}/{}.csv'.format(self.dataset_name, self.dataset_name)
         # dataset name: hadoop, islandora, fcrepo
         # augmentation type: char, word
         # augmenter name: Synonym, Split etc.
-        self.data_location_aug = 'D:/GitHub/NLP-with-Python/data/{}/{}_{}_{}.csv'.format(self.dataset_name, self.dataset_name, self.augmentation_type, self.augmenter_name)     
+        self.data_location_aug = 'data/{}/{}_{}_{}.csv'.format(self.dataset_name, self.dataset_name, self.augmentation_type, self.augmenter_name)     
 
         # 데이터 변수 입력
         self.data_ori = pd.read_csv(self.data_location_ori) # original data
