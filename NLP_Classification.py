@@ -124,7 +124,7 @@ class NLP_classification_aug:
         self.xvalid = self.test_ori['text']
         self.ytrain = pd.get_dummies(self.train_data[set(self.data_comp.component)])
         self.yvalid = pd.get_dummies(self.test_ori[set(self.data_comp.component)])
-        self.label_nums = 37
+        self.label_nums = labels_Num[self.dataset_name]
 
     def tokenize_LSTM(self, xtrain, xvalid):
         self.tokenizer = Tokenizer(num_words=self.MAX_NB_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~', lower=True)
@@ -165,12 +165,12 @@ class NLP_classification_aug:
         self.modelLSTM.add(Embedding(self.MAX_NB_WORDS, self.EMBEDDING_DIM, input_length= self.MAX_SEQUENCE_LENGTH))
         self.modelLSTM.add(SpatialDropout1D(0.2))
         self.modelLSTM.add(LSTM(100, dropout=0.5, recurrent_dropout=0.2))
-        self.modelLSTM.add(Dense(37, activation='sigmoid'))
+        self.modelLSTM.add(Dense(labels_Num[self.dataset_name] -1, activation='sigmoid'))
         self.modelLSTM.compile(loss='categorical_crossentropy', optimizer='adam', metrics=[tf.keras.metrics.Recall(top_k = topk)])
         print(self.modelLSTM.summary())
 
     def run_model_LSTM(self, x_train, y_train):
-        epochs = 15
+        epochs = 10
         batch_size = 80
 
         self.history = self.modelLSTM.fit(x_train, y_train, epochs=epochs, batch_size=batch_size,validation_split=0.1)
@@ -196,7 +196,7 @@ class NLP_classification_aug:
     
     #    def set_model_transformers(self):
 
-testClass = NLP_classification_aug("HADOOP","Synonym")
+#testClass = NLP_classification_aug("HADOOP","Synonym")
 
 '''testClass.preprocess()
 testClass.split_data()
@@ -206,12 +206,10 @@ testClass.set_model_LSTM(testClass.xtrain, 5)
 #testClass.run_model_LSTM(testClass.xtrain_pad, testClass.ytrain)
 #testClass.test_model(testClass.xvalid_pad, testClass.yvalid)'''
 
-dataset_name = ['HADOOP', 'FCREPO']
+dataset_name = ['ISLANDORA']
 #augmenter_name = ["OCR", "Keyboard", "Spelling", "ContextualWordEmbs", "Synonym", "Antonym", "Split"]
-augmenter_name = ["OCR", "ContextualWordEmbs", "Synonym", "Antonym", "Split"]
+augmenter_name = ["ContextualWordEmbs", "Synonym", "Antonym", "Split"]
 nlp_model = ['bert', 'distilbert', 'robert']
-
-count1 = 0
 
 word_hist = []
 word_hist_all = []
@@ -227,10 +225,12 @@ for dataset in dataset_name:
             ml.test_model(ml.xvalid_pad, ml.yvalid)
 
             word_hist.append(ml.history)
-        
+            
+        word_hist_all = []
         for i in range(3):
             word_hist_all.append(word_hist[i].history)
-        
+
+
         for x in range(3):
             # convert the history dict to a pandas DataFrame
             hist_df = pd.DataFrame(word_hist_all[x])
