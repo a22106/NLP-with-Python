@@ -3,12 +3,13 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Dense, Embedding, LSTM, SpatialDropout1D, Activation, Flatten, GlobalMaxPooling1D, Dropout1D, Dropout, Conv1D
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dropout
+
 import re
 import nltk
 import chart_studio
@@ -23,7 +24,7 @@ from IPython.core.interactiveshell import InteractiveShell
 import plotly.figure_factory as ff
 
 
-ISLANDORA_LABEL_NUM = 67
+ISLANDORA_LABEL_NUM = 66
 
 HADOOP_LABEL_NUM = 37
 FCREPO_LABEL_NUM = 22
@@ -175,12 +176,36 @@ class NLP_classification_aug:
 
         self.history = self.modelLSTM.fit(x_train, y_train, epochs=epochs, batch_size=batch_size,validation_split=0.1)
 
-
-
     def test_model(self, xvalid, yvalid):
         self.accr = self.modelLSTM.evaluate(xvalid, yvalid)
         #print('Test set\n Loss: {:0.3f}\n Accuracy: {0.3f}'.format(self.accr[0], self.accr[1]))
 #    def sef_model_CNN(self):
+
+    '''        self.MAX_NB_WORDS = 25000
+            # Max number of words in each complaint.
+            self.MAX_SEQUENCE_LENGTH = 250
+            self.EMBEDDING_DIM = 100 # how big is each word vector'''
+
+    def set_model_CNN(self, topk):
+        self.modelCNN = Sequential()
+        self.modelCNN.add(Dropout(0.1))
+        self.modelCNN.add(Conv1D(self.MAX_SEQUENCE_LENGTH, 3, padding='valid', activation='relu', strides=1))
+        self.modelCNN.add(GlobalMaxPooling1D())
+        self.modelCNN.add(Dense(labels_Num[self.dataset_name], activation='sigmoid'))
+        self.modelCNN.compile(loss='categorical_crossentropy', optimizer='adam', metrics=[tf.keras.metrics.Recall(top_k = topk)])
+        print(self.modelCNN.summary())
+
+    def run_model_CNN(self, x_train, y_train):
+        epochs = 10
+        batch_size = 80
+
+        self.history = self.modelCNN.fit(x_train, y_train, epochs=epochs, batch_size=batch_size,validation_split=0.1)
+
+    def test_model_CNN(self, xvalid, yvalid):
+        cnn_model_test = load_model('model-conv1d.h5') 
+        metrics = cnn_model_test.evaluate(xvalid, yvalid)
+        print("{}: {}".format(self.modelCNN.metrics_names[0], metrics[0]))
+        print("{}: {}".format(self.modelCNN.metrics_names[1], metrics[1]))
     
     def set_model_RNN(self):
         
@@ -206,12 +231,12 @@ testClass.set_model_LSTM(testClass.xtrain, 5)
 #testClass.run_model_LSTM(testClass.xtrain_pad, testClass.ytrain)
 #testClass.test_model(testClass.xvalid_pad, testClass.yvalid)'''
 
-dataset_name = ['ISLANDORA']
+dataset_name = ['HADOOP']
 #augmenter_name = ["OCR", "Keyboard", "Spelling", "ContextualWordEmbs", "Synonym", "Antonym", "Split"]
 augmenter_name = ["ContextualWordEmbs", "Synonym", "Antonym", "Split"]
 nlp_model = ['bert', 'distilbert', 'robert']
 
-word_hist = []
+'''word_hist = []
 word_hist_all = []
 for dataset in dataset_name:
     for augment in augmenter_name:
@@ -223,6 +248,36 @@ for dataset in dataset_name:
             ml.set_model_LSTM(topk)
             ml.run_model_LSTM(ml.xtrain_pad, ml.ytrain)
             ml.test_model(ml.xvalid_pad, ml.yvalid)
+
+            word_hist.append(ml.history)
+            
+        word_hist_all = []
+        for i in range(3):
+            word_hist_all.append(word_hist[i].history)
+
+
+        for x in range(3):
+            # convert the history dict to a pandas DataFrame
+            hist_df = pd.DataFrame(word_hist_all[x])
+
+            # save to csv
+            hist_csv_file = 'history/20211205/HistoryRecallat{}_data{}_project{}.csv'.format(int(x%3)*5+5, augment, dataset)
+            with open(hist_csv_file, mode = 'w') as f:
+                hist_df.to_csv(f)'''
+
+# CNN
+word_hist = []
+word_hist_all = []
+for dataset in dataset_name:
+    for augment in augmenter_name:
+        for topk in range(5, 16, 5):
+            ml = NLP_classification_aug(dataset, augment)
+            ml.preprocess()
+            ml.split_data()
+            ml.tokenize_CNN()
+            ml.set_model_CNN(topk)
+            ml.run_model_CNN(ml.xtrain_pad, ml.ytrain)
+            ml.test_model_CNN(ml.xvalid_pad, ml.yvalid)
 
             word_hist.append(ml.history)
             
