@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import Dense, Embedding, LSTM, SpatialDropout1D, Activation, Flatten, GlobalMaxPooling1D, Dropout1D, Dropout, Conv1D
+from tensorflow.keras.layers import Dense, Embedding, LSTM, SpatialDropout1D, Activation, Flatten, GlobalMaxPooling1D, Dropout, Conv1D
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping
@@ -63,7 +63,7 @@ class NLP_classification_aug:
 
         # 데이터 변수 입력
         self.data_ori = pd.read_csv(self.data_location_ori) # original data
-        self.data = pd.read_csv(self.data_location_aug) # augmented data
+        self.data = pd.read_csv(self.data_location_aug, encoding='cp949') # augmented data
 
         print(self.data.head())
         self.len_data = len(self.data_ori)
@@ -166,7 +166,7 @@ class NLP_classification_aug:
         self.modelLSTM.add(Embedding(self.MAX_NB_WORDS, self.EMBEDDING_DIM, input_length= self.MAX_SEQUENCE_LENGTH))
         self.modelLSTM.add(SpatialDropout1D(0.2))
         self.modelLSTM.add(LSTM(100, dropout=0.5, recurrent_dropout=0.2))
-        self.modelLSTM.add(Dense(labels_Num[self.dataset_name] -1, activation='sigmoid'))
+        self.modelLSTM.add(Dense(labels_Num[self.dataset_name], activation='sigmoid'))
         self.modelLSTM.compile(loss='categorical_crossentropy', optimizer='adam', metrics=[tf.keras.metrics.Recall(top_k = topk)])
         print(self.modelLSTM.summary())
 
@@ -231,12 +231,12 @@ testClass.set_model_LSTM(testClass.xtrain, 5)
 #testClass.run_model_LSTM(testClass.xtrain_pad, testClass.ytrain)
 #testClass.test_model(testClass.xvalid_pad, testClass.yvalid)'''
 
-dataset_name = ['HADOOP']
+dataset_name = ['ISLANDORA']
 #augmenter_name = ["OCR", "Keyboard", "Spelling", "ContextualWordEmbs", "Synonym", "Antonym", "Split"]
-augmenter_name = ["ContextualWordEmbs", "Synonym", "Antonym", "Split"]
+augmenter_name = ["OCR", "ContextualWordEmbs", "Synonym", "Antonym", "Split"]
 nlp_model = ['bert', 'distilbert', 'robert']
 
-'''word_hist = []
+word_hist = []
 word_hist_all = []
 for dataset in dataset_name:
     for augment in augmenter_name:
@@ -248,6 +248,36 @@ for dataset in dataset_name:
             ml.set_model_LSTM(topk)
             ml.run_model_LSTM(ml.xtrain_pad, ml.ytrain)
             ml.test_model(ml.xvalid_pad, ml.yvalid)
+
+            word_hist.append(ml.history)
+            
+        word_hist_all = []
+        for i in range(1):
+            word_hist_all.append(word_hist[i].history)
+
+
+        for x in range(1):
+            # convert the history dict to a pandas DataFrame
+            hist_df = pd.DataFrame(word_hist_all[x])
+
+            # save to csv
+            hist_csv_file = 'history/20211205/HistoryRecallat{}_data{}_project{}.csv'.format(int(x%3)*5+5, augment, dataset)
+            with open(hist_csv_file, mode = 'w') as f:
+                hist_df.to_csv(f)
+
+# CNN
+'''word_hist = []
+word_hist_all = []
+for dataset in dataset_name:
+    for augment in augmenter_name:
+        for topk in range(5, 16, 5):
+            ml = NLP_classification_aug(dataset, augment)
+            ml.preprocess()
+            ml.split_data()
+            ml.tokenize_CNN()
+            ml.set_model_LSTM(topk)
+            #ml.run_model_LSTM(ml.xtrain_pad, ml.ytrain)
+            #ml.test_model_LSTM(ml.xvalid_pad, ml.yvalid)
 
             word_hist.append(ml.history)
             
@@ -264,33 +294,3 @@ for dataset in dataset_name:
             hist_csv_file = 'history/20211205/HistoryRecallat{}_data{}_project{}.csv'.format(int(x%3)*5+5, augment, dataset)
             with open(hist_csv_file, mode = 'w') as f:
                 hist_df.to_csv(f)'''
-
-# CNN
-word_hist = []
-word_hist_all = []
-for dataset in dataset_name:
-    for augment in augmenter_name:
-        for topk in range(5, 16, 5):
-            ml = NLP_classification_aug(dataset, augment)
-            ml.preprocess()
-            ml.split_data()
-            ml.tokenize_CNN()
-            ml.set_model_CNN(topk)
-            ml.run_model_CNN(ml.xtrain_pad, ml.ytrain)
-            ml.test_model_CNN(ml.xvalid_pad, ml.yvalid)
-
-            word_hist.append(ml.history)
-            
-        word_hist_all = []
-        for i in range(3):
-            word_hist_all.append(word_hist[i].history)
-
-
-        for x in range(3):
-            # convert the history dict to a pandas DataFrame
-            hist_df = pd.DataFrame(word_hist_all[x])
-
-            # save to csv
-            hist_csv_file = 'history/20211205/HistoryRecallat{}_data{}_project{}.csv'.format(int(x%3)*5+5, augment, dataset)
-            with open(hist_csv_file, mode = 'w') as f:
-                hist_df.to_csv(f)
