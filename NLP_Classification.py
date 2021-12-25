@@ -111,10 +111,10 @@ class NLP_classification_aug:
         self.test_ori['text'] = list(self.test_ori.title + " "+ self.test_ori.description)
 
         self.eval_index = []
-        for aug_num in range(7):
+        for aug_num in range(2):
             iidf2 = [i + self.len_data* aug_num for i in self.eval_index_list]
             self.eval_index = self.eval_index + iidf2
-        
+        self.eval_index.__sizeof__
         # train data 생성
         self.train_data = self.data.drop(index = self.eval_index)
 
@@ -231,9 +231,9 @@ testClass.set_model_LSTM(testClass.xtrain, 5)
 #testClass.run_model_LSTM(testClass.xtrain_pad, testClass.ytrain)
 #testClass.test_model(testClass.xvalid_pad, testClass.yvalid)'''
 
-dataset_name = ['ISLANDORA']
+dataset_name = ['HADOOP', 'ISLANDORA', 'FCREPO']
 #augmenter_name = ["OCR", "Keyboard", "Spelling", "ContextualWordEmbs", "Synonym", "Antonym", "Split"]
-augmenter_name = ["OCR", "ContextualWordEmbs", "Synonym", "Antonym", "Split"]
+augmenter_name = ["Keyboard", "ContextualWordEmbs", "Synonym"]
 nlp_model = ['bert', 'distilbert', 'robert']
 
 word_hist = []
